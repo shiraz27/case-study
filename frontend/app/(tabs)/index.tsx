@@ -6,11 +6,7 @@ import { setToken } from "../authSlice";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
 
-const LoginButton = ({
-  callback,
-}: {
-  callback: (token: string | null) => void;
-}) => {
+const LoginButton = ({ callback }: { callback: (token: boolean) => void }) => {
   const dispatch = useDispatch();
   const [login, { isLoading }] = useLoginMutation();
 
@@ -31,10 +27,14 @@ const LogoutButton = ({ callback }: { callback: () => void }) => {
 
   const handleLogout = async () => {
     try {
-      const token = await SecureStore.deleteItemAsync("token");
+      setIsLoading(true);
+      await SecureStore.deleteItemAsync("token");
       dispatch(setToken(null));
       callback();
-    } catch (error) {}
+      setIsLoading(false);
+    } catch (error) {
+      setIsLoading(false);
+    }
   };
 
   return <Button isLoading={isLoading} title="Logout" onPress={handleLogout} />;
@@ -57,23 +57,28 @@ export default function TabOneScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.authContainer}>
-        <LoginButton
-          callback={(value) => {
-            setIsLoggedIn(value);
-            refetch();
-          }}
-        />
-        <LogoutButton callback={() => setIsLoggedIn(false)} />
+        {isLoggedIn ? (
+          <LogoutButton callback={() => setIsLoggedIn(false)} />
+        ) : (
+          <LoginButton
+            callback={(value) => {
+              setIsLoggedIn(value);
+              refetch();
+            }}
+          />
+        )}
       </View>
-      <View
+      {/* <View
         style={styles.separator}
         lightColor="#eee"
         darkColor="rgba(255,255,255,0.1)"
-      />
-      <Text style={isLoggedIn ? styles.secondLine : styles.secondLineError}>
-        You are currently{isLoggedIn ? "" : " not"} logged in.
-      </Text>
-      {/* <EditScreenInfo path="app/(tabs)/index.tsx"/> */}
+      /> */}
+      <View style={styles.body}>
+        <Text style={isLoggedIn ? styles.secondLine : styles.secondLineError}>
+          You are currently{isLoggedIn ? "" : " not"} logged in.
+        </Text>
+        {/* <EditScreenInfo path="app/(tabs)/index.tsx"/> */}
+      </View>
     </View>
   );
 }
@@ -106,5 +111,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     width: "100%",
+  },
+  body: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
