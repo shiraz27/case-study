@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import * as SecureStore from "expo-secure-store";
 
 export type AuthState = {
   auth: TokenState;
@@ -18,6 +19,11 @@ const authSlice = createSlice({
   reducers: {
     setToken: (state, action) => {
       state.token = action.payload;
+      if (action.payload) {
+        SecureStore.setItemAsync("token", action.payload);
+      } else {
+        SecureStore.deleteItemAsync("token");
+      }
     },
   },
 });

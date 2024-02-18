@@ -1,5 +1,6 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { selectToken, AuthState } from "./authSlice";
+import * as SecureStore from "expo-secure-store";
 
 const baseQuery = fetchBaseQuery({
   baseUrl: "http://localhost:3000",

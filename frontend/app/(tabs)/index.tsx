@@ -3,8 +3,14 @@ import { Text, View, Button } from "@/components/Themed";
 import { useGetMeQuery, useLoginMutation } from "@/app/apiSlice";
 import { useDispatch } from "react-redux";
 import { setToken } from "../authSlice";
+import * as SecureStore from "expo-secure-store";
+import { useEffect, useState } from "react";
 
-const LoginButton = ({ callback }: { callback: () => void }) => {
+const LoginButton = ({
+  callback,
+}: {
+  callback: (token: string | null) => void;
+}) => {
   const dispatch = useDispatch();
   const [login, { isLoading }] = useLoginMutation();
 
@@ -12,29 +18,61 @@ const LoginButton = ({ callback }: { callback: () => void }) => {
     try {
       const data = await login({}).unwrap();
       dispatch(setToken(data.token || null));
-      callback();
-    } catch (error) {
-      console.error("Login failed", error);
-    }
+      callback(data.token || null);
+    } catch (error) {}
   };
 
-  return <Button title="Login" onPress={handleLogin} />;
+  return <Button isLoading={isLoading} title="Login" onPress={handleLogin} />;
+};
+
+const LogoutButton = ({ callback }: { callback: () => void }) => {
+  const dispatch = useDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      const token = await SecureStore.deleteItemAsync("token");
+      dispatch(setToken(null));
+      callback();
+    } catch (error) {}
+  };
+
+  return <Button isLoading={isLoading} title="Logout" onPress={handleLogout} />;
 };
 
 export default function TabOneScreen() {
-  const { isError, refetch } = useGetMeQuery({});
+  const dispatch = useDispatch();
+  const { refetch } = useGetMeQuery({});
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const loadToken = async () => {
+      const token = await SecureStore.getItemAsync("token");
+      setIsLoggedIn(token ? true : false);
+      dispatch(setToken(token));
+    };
+    loadToken();
+  }, [dispatch, isLoggedIn]);
 
   return (
     <View style={styles.container}>
-      <Text style={isError ? styles.secondLineError : styles.secondLine}>
-        You are currently{isError ? " not" : ""} logged in.
-      </Text>
+      <View style={styles.authContainer}>
+        <LoginButton
+          callback={(value) => {
+            setIsLoggedIn(value);
+            refetch();
+          }}
+        />
+        <LogoutButton callback={() => setIsLoggedIn(false)} />
+      </View>
       <View
         style={styles.separator}
         lightColor="#eee"
         darkColor="rgba(255,255,255,0.1)"
       />
-      <LoginButton callback={refetch} />
+      <Text style={isLoggedIn ? styles.secondLine : styles.secondLineError}>
+        You are currently{isLoggedIn ? "" : " not"} logged in.
+      </Text>
       {/* <EditScreenInfo path="app/(tabs)/index.tsx"/> */}
     </View>
   );
@@ -44,7 +82,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
+    padding: 20,
   },
   title: {
     fontSize: 20,
@@ -62,5 +101,10 @@ const styles = StyleSheet.create({
     marginVertical: 30,
     height: 1,
     width: "80%",
+  },
+  authContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
   },
 });

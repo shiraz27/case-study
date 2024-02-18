@@ -7,7 +7,8 @@ import {
   Text as DefaultText,
   View as DefaultView,
   Button as DefaultButton,
-  ButtonProps,
+  ButtonProps as DefaultButtonProps,
+  ActivityIndicator,
 } from "react-native";
 
 import Colors from "@/constants/Colors";
@@ -51,13 +52,21 @@ export function View(props: ViewProps) {
 
   return <DefaultView style={[{ backgroundColor }, style]} {...otherProps} />;
 }
+interface ButtonProps extends DefaultButtonProps {
+  isLoading?: boolean;
+}
 
 export function Button(props: ButtonProps) {
-  const { title = "", ...otherProps } = props;
+  const { title = "", isLoading, ...otherProps } = props;
 
   const textColor = useThemeColor(
     { light: Colors.light.text, dark: Colors.dark.text },
     "background"
   );
-  return <DefaultButton title={title} color={textColor} {...otherProps} />;
+
+  return isLoading ? (
+    <ActivityIndicator size="small" color={textColor} />
+  ) : (
+    <DefaultButton title={title} color={textColor} {...otherProps} />
+  );
 }
