@@ -1,6 +1,10 @@
-import { StyleSheet } from "react-native";
+import { StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Text, View, Button } from "@/components/Themed";
-import { useGetMeQuery, useLoginMutation } from "@/app/apiSlice";
+import {
+  useCreateOrderMutation,
+  useGetMeQuery,
+  useLoginMutation,
+} from "@/app/apiSlice";
 import { useDispatch } from "react-redux";
 import { setToken } from "../authSlice";
 import * as SecureStore from "expo-secure-store";
@@ -40,6 +44,24 @@ const LogoutButton = ({ callback }: { callback: () => void }) => {
   return <Button isLoading={isLoading} title="Logout" onPress={handleLogout} />;
 };
 
+const OrderButton = () => {
+  const [createOrder, { isLoading }] = useCreateOrderMutation();
+
+  const handleOrder = async () => {
+    try {
+      const data = await createOrder({}).unwrap();
+      console.log(data);
+    } catch (error) {}
+  };
+
+  return (
+    <TouchableOpacity style={styles.button} onPress={handleOrder}>
+      <Text style={styles.text}>Order something 🍕</Text>
+      {isLoading && <ActivityIndicator size="small" color="white" />}
+    </TouchableOpacity>
+  );
+};
+
 export default function TabOneScreen() {
   const dispatch = useDispatch();
   const { refetch } = useGetMeQuery({});
@@ -68,16 +90,11 @@ export default function TabOneScreen() {
           />
         )}
       </View>
-      {/* <View
-        style={styles.separator}
-        lightColor="#eee"
-        darkColor="rgba(255,255,255,0.1)"
-      /> */}
       <View style={styles.body}>
         <Text style={isLoggedIn ? styles.secondLine : styles.secondLineError}>
           You are currently{isLoggedIn ? "" : " not"} logged in.
         </Text>
-        {/* <EditScreenInfo path="app/(tabs)/index.tsx"/> */}
+        <OrderButton />
       </View>
     </View>
   );
@@ -116,5 +133,24 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+  },
+  button: {
+    flexDirection: "row",
+    backgroundColor: "#007BFF",
+    padding: 15,
+    borderRadius: 5,
+    alignItems: "center",
+    justifyContent: "center",
+    margin: 10,
+    elevation: 3,
+    shadowOffset: { width: 1, height: 1 },
+    shadowColor: "#333",
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+  },
+  text: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "bold",
   },
 });
