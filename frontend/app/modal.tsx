@@ -33,7 +33,7 @@ const Header = () => {
   );
 };
 
-const Timer = ({
+const CountdownOrder = ({
   time,
   setRefetchIsReady,
 }: {
@@ -60,27 +60,28 @@ const Timer = ({
     return () => clearInterval(intervalId);
   }, [timeLeft]);
 
+  useEffect(() => {
+    setTimeLeft(time);
+  }, [time]);
+
   return (
-    <View>
-      <Text style={styles.timer}>
-        {`${hours.toString().padStart(2, "0")}:${minutes
-          .toString()
-          .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`}
-      </Text>
-    </View>
+    <>
+      <Text style={styles.title}>Payment successful</Text>
+      <Text style={styles.message}>Your pickup time starts in 1 minute</Text>
+      <View style={styles.separator10} />
+      <View>
+        <Text style={styles.timer}>
+          {`${hours.toString().padStart(2, "0")}:${minutes
+            .toString()
+            .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`}
+        </Text>
+      </View>
+    </>
   );
 };
 
-const OrderStatus = ({
-  isPaid,
-  waitTime,
-  setIsReady,
-}: {
-  isPaid: boolean;
-  waitTime: number;
-  setIsReady: (value: number) => void;
-}) => {
-  return isPaid ? (
+const PaidOrder = () => {
+  return (
     <View style={styles.paid}>
       <Text style={styles.timer}>
         🐧 Your order is confirmed, our driver is on the way!
@@ -90,12 +91,6 @@ const OrderStatus = ({
         <Text style={styles.message}>Go to home screen!</Text>
       </Link>
     </View>
-  ) : (
-    <>
-      <Text style={styles.message}>Your pickup time starts in 1 minute</Text>
-      <View style={styles.separator10} />
-      <Timer time={waitTime} setRefetchIsReady={setIsReady} />
-    </>
   );
 };
 
@@ -107,15 +102,20 @@ export default function ModalScreen() {
   const { width } = useWindowDimensions();
   const [isReady, setIsReady] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
-  const [waitTime, setWaitTime] = useState(62);
+  const [waitTime, setWaitTime] = useState(2);
+  const [isReloading, setIsReloading] = useState(false);
 
   const getOrder = async () => {
     try {
+      setIsReloading(true);
       refetch().then((res) => {
         setIsPaid(res?.data?.status === "PAID");
+        console.log(res?.data?.status);
+        setIsReloading(false);
       });
     } catch (error) {
       console.log(error);
+      setIsReloading(false);
     }
   };
 
@@ -138,21 +138,22 @@ export default function ModalScreen() {
         source={require("../assets/icons/check-circle.svg")}
       />
       <View style={styles.separator20} />
-      <Text style={styles.title}>Payment successful</Text>
       <View style={styles.separator10} />
-      <OrderStatus
-        isPaid={isPaid}
-        waitTime={waitTime}
-        setIsReady={(value: number) => setIsReady(value === 0)}
-      />
-      {isLoading && <ActivityIndicator size="small" color="#0f71e9" />}
-      {isReady && !isPaid ? (
+      {isPaid && isReady ? (
+        <PaidOrder />
+      ) : (
+        <CountdownOrder
+          time={waitTime}
+          setRefetchIsReady={(time) => setIsReady(time === 0)}
+        />
+      )}
+      {isReady && !isPaid && !isLoading && !isReloading ? (
         <TouchableOpacity
           style={{ padding: 20 }}
           onPress={() => {
+            setWaitTime(10);
             setIsReady(false);
             setIsPaid(false);
-            setWaitTime(62);
           }}
         >
           <Text style={styles.secondLineError}>
@@ -161,6 +162,8 @@ export default function ModalScreen() {
           </Text>
         </TouchableOpacity>
       ) : null}
+      {isLoading ||
+        (isLoading && <ActivityIndicator size="small" color="#0f71e9" />)}
       <Image
         style={styles.image}
         contentFit="contain"
