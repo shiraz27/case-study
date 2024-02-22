@@ -1,4 +1,9 @@
-import { StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
+import {
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
 import { Text, View, Button } from "@/components/Themed";
 import {
   useCreateOrderMutation,
@@ -9,7 +14,7 @@ import { useDispatch } from "react-redux";
 import { setToken } from "./Redux/authSlice";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
-import { Link } from "expo-router";
+import { Link, router } from "expo-router";
 
 const LoginButton = ({ callback }: { callback: (token: boolean) => void }) => {
   const dispatch = useDispatch();
@@ -45,18 +50,27 @@ const LogoutButton = ({ callback }: { callback: () => void }) => {
   return <Button isLoading={isLoading} title="Logout" onPress={handleLogout} />;
 };
 
-const OrderButton = () => {
+const OrderButton = ({ isLoggedIn }: { isLoggedIn: boolean }) => {
   const [createOrder, { isLoading }] = useCreateOrderMutation();
 
   const handleOrder = async () => {
-    try {
-      const data = await createOrder({}).unwrap();
-      console.log(data);
-    } catch (error) {}
+    if (isLoggedIn) {
+      try {
+        const data = await createOrder({}).unwrap();
+        router.setParams({ orderId: data?.id });
+      } catch (error) {}
+    } else {
+      Alert.alert("Something went wrong", "You have to login to make orders!", [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+      ]);
+    }
   };
 
   return (
-    <Link href="/modal" asChild>
+    <Link href={isLoggedIn ? "/modal" : "/"} asChild>
       <TouchableOpacity style={styles.button} onPress={handleOrder}>
         <Text style={styles.text}>Order something 🍕</Text>
         {isLoading && <ActivityIndicator size="small" color="white" />}
@@ -97,7 +111,7 @@ export default function index() {
         <Text style={isLoggedIn ? styles.secondLine : styles.secondLineError}>
           You are currently{isLoggedIn ? "" : " not"} logged in.
         </Text>
-        <OrderButton />
+        <OrderButton isLoggedIn={isLoggedIn} />
       </View>
     </View>
   );

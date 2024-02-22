@@ -1,10 +1,15 @@
-import { StyleSheet, useWindowDimensions } from "react-native";
+import {
+  ActivityIndicator,
+  StyleSheet,
+  useWindowDimensions,
+} from "react-native";
 import { View, Text } from "@/components/Themed";
-import { useGetOrdersQuery } from "./Redux/apiSlice";
+import { useFetchOrderQuery } from "./Redux/apiSlice";
 import { Image } from "expo-image";
 import { TouchableOpacity, SafeAreaView } from "react-native";
 import { useEffect, useState } from "react";
 import { Link } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 
 const Header = () => {
   return (
@@ -28,7 +33,13 @@ const Header = () => {
   );
 };
 
-const Timer = ({ time }: { time: number }) => {
+const Timer = ({
+  time,
+  setRefetchIsReady,
+}: {
+  time: number;
+  setRefetchIsReady: (value: number) => void;
+}) => {
   const [timeLeft, setTimeLeft] = useState(time);
 
   let hours = Math.floor(timeLeft / 3600);
@@ -36,7 +47,10 @@ const Timer = ({ time }: { time: number }) => {
   let seconds = timeLeft % 60;
 
   useEffect(() => {
-    if (timeLeft <= 0) return;
+    if (timeLeft <= 0) {
+      setRefetchIsReady(timeLeft);
+      return;
+    }
     const intervalId = setInterval(() => {
       setTimeLeft(timeLeft - 1);
       hours = Math.floor(timeLeft / 3600);
@@ -57,10 +71,60 @@ const Timer = ({ time }: { time: number }) => {
   );
 };
 
+const OrderStatus = ({
+  isPaid,
+  waitTime,
+  setIsReady,
+}: {
+  isPaid: boolean;
+  waitTime: number;
+  setIsReady: (value: number) => void;
+}) => {
+  return isPaid ? (
+    <View style={styles.paid}>
+      <Text style={styles.timer}>
+        🐧 Your order is confirmed, our driver is on the way!
+      </Text>
+      <View style={styles.separator10} />
+      <Link href="/">
+        <Text style={styles.message}>Go to home screen!</Text>
+      </Link>
+    </View>
+  ) : (
+    <>
+      <Text style={styles.message}>Your pickup time starts in 1 minute</Text>
+      <View style={styles.separator10} />
+      <Timer time={waitTime} setRefetchIsReady={setIsReady} />
+    </>
+  );
+};
+
 export default function ModalScreen() {
+  const { orderId } = useLocalSearchParams();
+  const { data, isLoading, refetch } = useFetchOrderQuery(orderId, {
+    skip: !orderId,
+  });
   const { width } = useWindowDimensions();
-  const { data: orders, error, isLoading } = useGetOrdersQuery({});
-  console.log(orders);
+  const [isReady, setIsReady] = useState(false);
+  const [isPaid, setIsPaid] = useState(false);
+  const [waitTime, setWaitTime] = useState(62);
+
+  const getOrder = async () => {
+    try {
+      refetch().then((res) => {
+        setIsPaid(res?.data?.status === "PAID");
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    if (isReady) {
+      getOrder();
+    }
+  }, [isReady]);
+
   return (
     <SafeAreaView style={styles.container}>
       <Header />
@@ -76,9 +140,27 @@ export default function ModalScreen() {
       <View style={styles.separator20} />
       <Text style={styles.title}>Payment successful</Text>
       <View style={styles.separator10} />
-      <Text style={styles.message}>Your pickup time starts in 3 minutes</Text>
-      <View style={styles.separator10} />
-      <Timer time={10} />
+      <OrderStatus
+        isPaid={isPaid}
+        waitTime={waitTime}
+        setIsReady={(value: number) => setIsReady(value === 0)}
+      />
+      {isLoading && <ActivityIndicator size="small" color="#0f71e9" />}
+      {isReady && !isPaid ? (
+        <TouchableOpacity
+          style={{ padding: 20 }}
+          onPress={() => {
+            setIsReady(false);
+            setIsPaid(false);
+            setWaitTime(62);
+          }}
+        >
+          <Text style={styles.secondLineError}>
+            Looks like your order is taking slower than usual, please press here
+            to refresh your timer.
+          </Text>
+        </TouchableOpacity>
+      ) : null}
       <Image
         style={styles.image}
         contentFit="contain"
@@ -133,5 +215,15 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: "black",
     fontWeight: "bold",
+  },
+  paid: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+    paddingTop: 0,
+  },
+  secondLineError: {
+    fontSize: 12,
+    color: "red",
   },
 });
