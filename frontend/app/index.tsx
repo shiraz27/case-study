@@ -4,11 +4,12 @@ import {
   useCreateOrderMutation,
   useGetMeQuery,
   useLoginMutation,
-} from "@/app/apiSlice";
+} from "./Redux/apiSlice";
 import { useDispatch } from "react-redux";
-import { setToken } from "../authSlice";
+import { setToken } from "./Redux/authSlice";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
+import { Link } from "expo-router";
 
 const LoginButton = ({ callback }: { callback: (token: boolean) => void }) => {
   const dispatch = useDispatch();
@@ -55,14 +56,16 @@ const OrderButton = () => {
   };
 
   return (
-    <TouchableOpacity style={styles.button} onPress={handleOrder}>
-      <Text style={styles.text}>Order something 🍕</Text>
-      {isLoading && <ActivityIndicator size="small" color="white" />}
-    </TouchableOpacity>
+    <Link href="/modal" asChild>
+      <TouchableOpacity style={styles.button} onPress={handleOrder}>
+        <Text style={styles.text}>Order something 🍕</Text>
+        {isLoading && <ActivityIndicator size="small" color="white" />}
+      </TouchableOpacity>
+    </Link>
   );
 };
 
-export default function TabOneScreen() {
+export default function index() {
   const dispatch = useDispatch();
   const { refetch } = useGetMeQuery({});
   const [isLoggedIn, setIsLoggedIn] = useState(false);
